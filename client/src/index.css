@@ -1,0 +1,93 @@
+/* Colours, kept in one place. Used below as var(--name). */
+:root {
+  color-scheme: light;
+  --page: #f3f3f0;
+  --card: #fcfcfb;
+  --text: #0b0b0b;
+  --muted: #52514e;
+  --border: #dddcd6;
+  --line: #2a78d6;
+  --profit: #007a00;
+  --loss: #c62828;
+}
+
+/* Colours for people whose computer is in dark mode */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --page: #111110;
+    --card: #1a1a19;
+    --text: #f0efec;
+    --muted: #c3c2b7;
+    --border: #3a3a37;
+    --line: #3987e5;
+    --profit: #3fc13f;
+    --loss: #ff7b7b;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--text);
+  font-family: system-ui, sans-serif;
+}
+
+main { max-width: 1000px; margin: 0 auto; padding: 1rem; }
+h2 { font-size: 1rem; margin: 0 0 0.75rem; }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* Totals */
+.summary { display: flex; flex-wrap: wrap; gap: 1rem 3rem; }
+.summary h2 { color: var(--muted); font-weight: normal; margin: 0; }
+.summary .note { width: 100%; }
+.big-number { font-size: 1.75rem; font-weight: 600; margin: 0.25rem 0 0; }
+.big-number small { font-size: 1rem; }
+
+/* Form */
+form { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-end; }
+label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.875rem; color: var(--muted); }
+form label { flex: 1 1 150px; }
+input, select, form button {
+  font: inherit;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+input, select { background: var(--page); color: var(--text); width: 100%; }
+form button { background: #2468b8; color: white; padding: 0.5rem 1.25rem; cursor: pointer; }
+form button:disabled { opacity: 0.6; }
+
+/* Tables */
+.table-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 0.5rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
+th { color: var(--muted); font-size: 0.875rem; }
+.number { text-align: right; font-variant-numeric: tabular-nums; }
+
+.alert-list { margin-top: 1rem; }
+
+/* A button that looks like a link. The chosen one is bold. */
+.link { font: inherit; color: var(--text); background: none; border: none; padding: 0; text-decoration: underline; cursor: pointer; }
+.link[aria-pressed='true'] { font-weight: bold; }
+
+/* Chart */
+.chart-header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.75rem; }
+details { margin-top: 0.75rem; }
+summary { cursor: pointer; color: var(--muted); }
+
+/* Green for profit, red for loss */
+.profit { color: var(--profit); }
+.loss { color: var(--loss); }
+
+.note { color: var(--muted); margin: 0; }
+.error { color: var(--loss); }
