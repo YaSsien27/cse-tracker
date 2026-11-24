@@ -48,6 +48,18 @@ await checkAlerts('JKH.N0000', 22, pretendSend);
 check('it only fires once', messages.length === 1);
 check('alerts for other symbols are untouched', db.getAlerts()[1].triggered === false);
 
+// --- Editing and deleting ---
+db.updateAlert(1, 'JKH.N0000', 30, 'above');
+check('an edited alert goes back to waiting', db.getAlerts()[0].triggered === false);
+await checkAlerts('JKH.N0000', 31, pretendSend);
+check('an edited alert can fire again', messages.length === 2);
+
+// Pretend the alert is edited while its message is being sent
+const changingId = db.saveAlert('DIAL.N0000', 10, 'above');
+await checkAlerts('DIAL.N0000', 11, async () => db.updateAlert(changingId, 'DIAL.N0000', 50, 'above'));
+check('an alert edited during sending stays waiting', db.getAlert(changingId).triggered === false);
+check('an alert can be deleted', db.deleteAlert(changingId) && db.getAlert(changingId) === undefined);
+
 // --- The scheduled job ---
 // Replace the real fetch: the CSE price is 25, and Telegram says the message arrived
 let telegramCalls = 0;

@@ -1,13 +1,14 @@
 import { useState } from 'react'
-import { addHolding } from '../api.js'
+import { addHolding, updateHolding } from '../api.js'
 import { todayInColombo } from '../format.js'
+import { showToast } from '../toast.js'
 
 const emptyForm = { symbol: '', quantity: '', buy_price: '', buy_date: '' }
 
-// The form for adding a holding. Calls onAdded() after it is saved.
-function HoldingForm({ onAdded }) {
-  const [form, setForm] = useState(emptyForm)
-  const [error, setError] = useState('')
+// The form for adding a holding, or for editing one if "holding" is given.
+// Calls onSaved() after it is saved. onCancel adds a Cancel button.
+function HoldingForm({ holding, onSaved, onCancel }) {
+  const [form, setForm] = useState(holding ?? emptyForm)
   const [isSaving, setIsSaving] = useState(false)
 
   // Update one field, keeping the others the same
@@ -17,48 +18,54 @@ function HoldingForm({ onAdded }) {
 
   async function handleSubmit(event) {
     event.preventDefault() // stop the browser from reloading the page
-    setError('')
     setIsSaving(true)
     try {
       // Form fields are always text, so turn the numbers into real numbers
-      await addHolding({
-        ...form,
+      const data = {
+        symbol: form.symbol,
         quantity: Number(form.quantity),
         buy_price: Number(form.buy_price),
-      })
-      setForm(emptyForm)
-      onAdded()
+        buy_date: form.buy_date,
+      }
+      if (holding) {
+        const saved = await updateHolding(holding.id, data)
+        showToast('success', `${saved.symbol} updated.`)
+      } else {
+        const saved = await addHolding(data)
+        showToast('success', `${saved.symbol} added to your holdings.`)
+        setForm(emptyForm)
+      }
+      onSaved()
     } catch (error) {
-      setError(error.message)
+      showToast('error', error.message)
     } finally {
       setIsSaving(false)
     }
   }
 
   return (
-    <section className="card">
-      <h2>Add a holding</h2>
-      <form onSubmit={handleSubmit}>
-        <label>
-          Symbol
-          <input name="symbol" placeholder="JKH.N0000" value={form.symbol} onChange={handleChange} required />
-        </label>
-        <label>
-          Quantity
-          <input name="quantity" type="number" min="1" step="1" value={form.quantity} onChange={handleChange} required />
-        </label>
-        <label>
-          Buy price (Rs.)
-          <input name="buy_price" type="number" min="0" step="any" value={form.buy_price} onChange={handleChange} required />
-        </label>
-        <label>
-          Buy date
-          <input name="buy_date" type="date" max={todayInColombo()} value={form.buy_date} onChange={handleChange} required />
-        </label>
-        <button disabled={isSaving}>{isSaving ? 'Saving...' : 'Add'}</button>
-      </form>
-      {error && <p className="error" role="alert">{error}</p>}
-    </section>
+    <form onSubmit={handleSubmit}>
+      <label>
+        Symbol
+        <input name="symbol" placeholder="JKH.N0000" value={form.symbol} onChange={handleChange} required />
+      </label>
+      <label>
+        Quantity
+        <input name="quantity" type="number" min="1" step="1" value={form.quantity} onChange={handleChange} required />
+      </label>
+      <label>
+        Buy price (Rs.)
+        <input name="buy_price" type="number" min="0" step="any" value={form.buy_price} onChange={handleChange} required />
+      </label>
+      <label>
+        Buy date
+        <input name="buy_date" type="date" max={todayInColombo()} value={form.buy_date} onChange={handleChange} required />
+      </label>
+      <div className="form-buttons">
+        {onCancel && <button type="button" className="quiet" onClick={onCancel}>Cancel</button>}
+        <button disabled={isSaving}>{isSaving ? 'Saving...' : holding ? 'Save' : 'Add'}</button>
+      </div>
+    </form>
   )
 }
 

@@ -125,12 +125,31 @@ export function saveAlert(symbol, targetPrice, direction) {
 
 // One alert, or undefined if there is none with this id
 export function getAlert(id) {
-  return getAlerts().find((alert) => alert.id === id);
+  // Number() because an id from a web address is text
+  return getAlerts().find((alert) => alert.id === Number(id));
 }
 
-// Remember that an alert has fired, so it never fires again
-export function markAlertTriggered(id) {
-  db.prepare('UPDATE alerts SET triggered = 1 WHERE id = ?').run(id);
+// Returns true if the alert existed and was changed.
+// An edited alert goes back to not triggered, so it can fire again.
+export function updateAlert(id, symbol, targetPrice, direction) {
+  const result = db
+    .prepare('UPDATE alerts SET symbol = ?, target_price = ?, direction = ?, triggered = 0 WHERE id = ?')
+    .run(cleanSymbol(symbol), targetPrice, direction, id);
+  return result.changes > 0;
+}
+
+// Returns true if the alert existed and was deleted
+export function deleteAlert(id) {
+  const result = db.prepare('DELETE FROM alerts WHERE id = ?').run(id);
+  return result.changes > 0;
+}
+
+// Remember that an alert has fired, so it never fires again.
+// It must still match, in case it was edited while its message was being sent.
+export function markAlertTriggered(alert) {
+  db.prepare(
+    'UPDATE alerts SET triggered = 1 WHERE id = ? AND symbol = ? AND target_price = ? AND direction = ?'
+  ).run(alert.id, alert.symbol, alert.target_price, alert.direction);
 }
 
 export function getAlerts() {

@@ -12,6 +12,8 @@ import {
   saveAlert,
   getAlert,
   getAlerts,
+  updateAlert,
+  deleteAlert,
 } from './db.js';
 import { calculateHolding, calculateTotal } from './portfolio.js';
 
@@ -122,22 +124,48 @@ router.get('/alerts', (req, res) => {
   res.json(getAlerts());
 });
 
-// Create an alert
-router.post('/alerts', (req, res) => {
-  const { symbol, target_price, direction } = req.body ?? {};
+// Returns a message saying what is wrong with an alert, or null if it is fine
+function findAlertProblem(body) {
+  const { symbol, target_price, direction } = body ?? {};
 
-  if (!isValidSymbol(symbol)) {
-    return res.status(400).json({ error: 'symbol must look like JKH.N0000' });
-  }
+  if (!isValidSymbol(symbol)) return 'symbol must look like JKH.N0000';
   if (!Number.isFinite(target_price) || target_price <= 0) {
-    return res.status(400).json({ error: 'target_price must be a number above 0' });
+    return 'target_price must be a number above 0';
   }
   if (direction !== 'above' && direction !== 'below') {
-    return res.status(400).json({ error: "direction must be 'above' or 'below'" });
+    return "direction must be 'above' or 'below'";
   }
+  return null;
+}
 
+// Create an alert
+router.post('/alerts', (req, res) => {
+  const problem = findAlertProblem(req.body);
+  if (problem) return res.status(400).json({ error: problem });
+
+  const { symbol, target_price, direction } = req.body;
   const id = saveAlert(symbol, target_price, direction);
   res.status(201).json(getAlert(id));
+});
+
+// Edit an alert (send all three fields)
+router.put('/alerts/:id', (req, res) => {
+  const problem = findAlertProblem(req.body);
+  if (problem) return res.status(400).json({ error: problem });
+
+  const { symbol, target_price, direction } = req.body;
+  const wasFound = updateAlert(req.params.id, symbol, target_price, direction);
+  if (!wasFound) return res.status(404).json({ error: 'Alert not found' });
+
+  res.json(getAlert(req.params.id));
+});
+
+// Delete an alert
+router.delete('/alerts/:id', (req, res) => {
+  const wasFound = deleteAlert(req.params.id);
+  if (!wasFound) return res.status(404).json({ error: 'Alert not found' });
+
+  res.status(204).end();
 });
 
 // --- Problems ---

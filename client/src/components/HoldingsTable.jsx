@@ -1,7 +1,17 @@
+import { useState } from 'react'
+import { deleteHolding } from '../api.js'
 import { formatMoney, formatPercent, formatProfit, profitClass } from '../format.js'
+import { showToast } from '../toast.js'
+import DeleteModal from './DeleteModal.jsx'
+import HoldingForm from './HoldingForm.jsx'
+import Modal from './Modal.jsx'
 
 // The table of holdings. Clicking a symbol shows its chart.
-function HoldingsTable({ holdings, selectedSymbol, onSelect }) {
+// Calls onChanged() after a holding is edited or deleted.
+function HoldingsTable({ holdings, selectedSymbol, onSelect, onChanged }) {
+  const [editing, setEditing] = useState(null) // the holding in the edit pop-up
+  const [deleting, setDeleting] = useState(null) // the holding in the delete pop-up
+
   return (
     <section className="card">
       <h2>Holdings</h2>
@@ -20,11 +30,12 @@ function HoldingsTable({ holdings, selectedSymbol, onSelect }) {
                 <th className="number">Value</th>
                 <th className="number">Profit/loss</th>
                 <th className="number">%</th>
+                <th className="number">Actions</th>
               </tr>
             </thead>
             <tbody>
               {holdings.map((holding) => (
-                <tr key={holding.id}>
+                <tr key={holding.id} className={holding.symbol === selectedSymbol ? 'selected' : ''}>
                   <td>
                     <button
                       className="link"
@@ -40,12 +51,45 @@ function HoldingsTable({ holdings, selectedSymbol, onSelect }) {
                   <td className="number">{formatMoney(holding.current_price)}</td>
                   <td className="number">{formatMoney(holding.current_value)}</td>
                   <td className={`number ${profitClass(holding.profit_loss)}`}>{formatProfit(holding.profit_loss)}</td>
-                  <td className={`number ${profitClass(holding.profit_loss)}`}>{formatPercent(holding.profit_loss_percent)}</td>
+                  <td className="number">
+                    <span className={`pill ${profitClass(holding.profit_loss)}`}>{formatPercent(holding.profit_loss_percent)}</span>
+                  </td>
+                  <td className="actions">
+                    <button type="button" aria-label={`Edit ${holding.symbol}`} onClick={() => setEditing(holding)}>Edit</button>
+                    <button type="button" className="delete" aria-label={`Delete ${holding.symbol}`} onClick={() => setDeleting(holding)}>Delete</button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      )}
+
+      {editing && (
+        <Modal title="Edit holding" onClose={() => setEditing(null)}>
+          <HoldingForm
+            holding={editing}
+            onCancel={() => setEditing(null)}
+            onSaved={() => {
+              setEditing(null)
+              onChanged()
+            }}
+          />
+        </Modal>
+      )}
+
+      {deleting && (
+        <DeleteModal
+          title="Delete holding?"
+          message={`${deleting.quantity.toLocaleString('en-US')} × ${deleting.symbol}, bought ${deleting.buy_date}`}
+          onDelete={() => deleteHolding(deleting.id)}
+          onDeleted={() => {
+            showToast('success', `${deleting.symbol} deleted from your holdings.`)
+            setDeleting(null)
+            onChanged()
+          }}
+          onClose={() => setDeleting(null)}
+        />
       )}
     </section>
   )

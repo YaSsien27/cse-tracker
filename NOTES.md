@@ -110,8 +110,6 @@ Known problems:
 
 Ideas:
 
-- Edit and delete buttons for holdings (the API already supports both).
-- Edit and delete alerts (needs new API endpoints too).
 - Choose symbols from a list, using CSE's `allSecurityCode` endpoint.
 - Choose the chart's date range, and hide the overnight lines.
 - Automated tests for `portfolio.js`.

@@ -5,6 +5,19 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CSE Tracker</title>
+    <script>
+      // Choose the theme before the page is drawn, so it doesn't flash the wrong colours.
+      // Use the saved choice, or the computer's setting if there isn't one.
+      let savedTheme = null
+      try {
+        savedTheme = localStorage.getItem('theme')
+      } catch {
+        // Some browsers block storage. That's fine, we just won't remember the choice.
+      }
+      const prefersDark = matchMedia('(prefers-color-scheme: dark)').matches
+      const isSaved = savedTheme === 'light' || savedTheme === 'dark'
+      document.documentElement.dataset.theme = isSaved ? savedTheme : prefersDark ? 'dark' : 'light'
+    </script>
   </head>
   <body>
     <div id="root"></div>

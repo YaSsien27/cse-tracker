@@ -1,31 +1,35 @@
 import { useEffect, useState } from 'react'
-import { addAlert, getAlerts } from '../api.js'
+import { deleteAlert, getAlerts } from '../api.js'
 import { formatMoney } from '../format.js'
+import { showToast } from '../toast.js'
+import AlertForm from './AlertForm.jsx'
+import DeleteModal from './DeleteModal.jsx'
+import Modal from './Modal.jsx'
 
 const REFRESH_MS = 60 * 1000 // reload from our own server every minute
-const emptyForm = { symbol: '', direction: 'above', target_price: '' }
 
 // The form for creating price alerts, and the list of alerts
 function AlertsCard({ symbols }) {
   const [alerts, setAlerts] = useState(null) // null means "not loaded yet"
-  const [form, setForm] = useState(emptyForm)
-  const [loadError, setLoadError] = useState('')
-  const [saveError, setSaveError] = useState('')
-  const [isSaving, setIsSaving] = useState(false)
-  const [addCount, setAddCount] = useState(0) // goes up when an alert is added
+  const [editing, setEditing] = useState(null) // the alert in the edit pop-up
+  const [deleting, setDeleting] = useState(null) // the alert in the delete pop-up
+  const [changeCount, setChangeCount] = useState(0) // goes up when an alert changes
 
-  // Load at the start, when an alert is added, and every minute
+  // Load at the start, when an alert changes, and every minute
   useEffect(() => {
     let ignore = false // becomes true if a newer load has replaced this one
+    let hasFailed = false // so a failure is shown once, not every minute
 
     async function load() {
       try {
         const data = await getAlerts()
         if (ignore) return
         setAlerts(data)
-        setLoadError('')
+        hasFailed = false
       } catch (error) {
-        if (!ignore) setLoadError(error.message)
+        if (ignore || hasFailed) return
+        hasFailed = true
+        showToast('error', error.message)
       }
     }
 
@@ -35,54 +39,16 @@ function AlertsCard({ symbols }) {
       ignore = true
       clearInterval(timer)
     }
-  }, [addCount])
+  }, [changeCount])
 
-  function handleChange(event) {
-    setForm({ ...form, [event.target.name]: event.target.value })
-  }
-
-  async function handleSubmit(event) {
-    event.preventDefault() // stop the browser from reloading the page
-    setSaveError('')
-    setIsSaving(true)
-    try {
-      await addAlert({ ...form, target_price: Number(form.target_price) })
-      setForm(emptyForm)
-      setAddCount(addCount + 1)
-    } catch (error) {
-      setSaveError(error.message)
-    } finally {
-      setIsSaving(false)
-    }
+  function reload() {
+    setChangeCount((count) => count + 1)
   }
 
   return (
     <section className="card">
       <h2>Price alerts</h2>
-      <form onSubmit={handleSubmit}>
-        <label>
-          Symbol
-          {/* The datalist suggests shares you own, but you can type any symbol */}
-          <input name="symbol" list="alert-symbols" placeholder="JKH.N0000" value={form.symbol} onChange={handleChange} required />
-          <datalist id="alert-symbols">
-            {symbols.map((symbol) => <option key={symbol} value={symbol} />)}
-          </datalist>
-        </label>
-        <label>
-          Tell me when the price is
-          <select name="direction" value={form.direction} onChange={handleChange}>
-            <option value="above">at or above</option>
-            <option value="below">at or below</option>
-          </select>
-        </label>
-        <label>
-          Target price (Rs.)
-          <input name="target_price" type="number" min="0.01" step="any" value={form.target_price} onChange={handleChange} required />
-        </label>
-        <button disabled={isSaving}>{isSaving ? 'Saving...' : 'Add alert'}</button>
-      </form>
-      {saveError && <p className="error" role="alert">{saveError}</p>}
-      {loadError && <p className="error" role="alert">{loadError}</p>}
+      <AlertForm symbols={symbols} onSaved={reload} />
 
       {alerts?.length === 0 && <p className="note alert-list">No alerts yet.</p>}
       {alerts?.length > 0 && (
@@ -94,6 +60,7 @@ function AlertsCard({ symbols }) {
                 <th>When price is</th>
                 <th className="number">Target</th>
                 <th>Status</th>
+                <th className="number">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -102,12 +69,46 @@ function AlertsCard({ symbols }) {
                   <td>{alert.symbol}</td>
                   <td>at or {alert.direction}</td>
                   <td className="number">{formatMoney(alert.target_price)}</td>
-                  <td>{alert.triggered ? 'Triggered' : 'Waiting'}</td>
+                  <td>
+                    <span className={`pill ${alert.triggered ? 'profit' : 'waiting'}`}>{alert.triggered ? 'Triggered' : 'Waiting'}</span>
+                  </td>
+                  <td className="actions">
+                    <button type="button" aria-label={`Edit alert for ${alert.symbol}`} onClick={() => setEditing(alert)}>Edit</button>
+                    <button type="button" className="delete" aria-label={`Delete alert for ${alert.symbol}`} onClick={() => setDeleting(alert)}>Delete</button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      )}
+
+      {editing && (
+        <Modal title="Edit price alert" onClose={() => setEditing(null)}>
+          <AlertForm
+            alert={editing}
+            symbols={symbols}
+            onCancel={() => setEditing(null)}
+            onSaved={() => {
+              setEditing(null)
+              reload()
+            }}
+          />
+        </Modal>
+      )}
+
+      {deleting && (
+        <DeleteModal
+          title="Delete price alert?"
+          message={`${deleting.symbol} at or ${deleting.direction} ${formatMoney(deleting.target_price)}`}
+          onDelete={() => deleteAlert(deleting.id)}
+          onDeleted={() => {
+            showToast('success', `Alert for ${deleting.symbol} deleted.`)
+            setDeleting(null)
+            reload()
+          }}
+          onClose={() => setDeleting(null)}
+        />
       )}
     </section>
   )

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { getPrices } from '../api.js'
 import { formatDateTime, formatMoney } from '../format.js'
+import { prefersReducedMotion } from '../motion.js'
+import { showToast } from '../toast.js'
 
 const ONE_DAY = 24 * 60 * 60 * 1000 // in milliseconds
 const tickStyle = { fill: 'var(--muted)', fontSize: 12 }
@@ -10,7 +12,7 @@ const tickStyle = { fill: 'var(--muted)', fontSize: 12 }
 // lastFetched changes when a new price arrives, which reloads the chart.
 function PriceChart({ symbol, lastFetched }) {
   const [points, setPoints] = useState(null) // null means "still loading"
-  const [error, setError] = useState('')
+  const [hasFailed, setHasFailed] = useState(false)
 
   useEffect(() => {
     let ignore = false // becomes true if this chart closes before the reply arrives
@@ -21,9 +23,11 @@ function PriceChart({ symbol, lastFetched }) {
         if (ignore) return
         // Recharts needs the time as a number
         setPoints(prices.map((row) => ({ time: new Date(row.fetched_at).getTime(), price: row.price })))
-        setError('')
+        setHasFailed(false)
       } catch (error) {
-        if (!ignore) setError(error.message)
+        if (ignore) return
+        setHasFailed(true)
+        showToast('error', error.message)
       }
     }
 
@@ -33,7 +37,7 @@ function PriceChart({ symbol, lastFetched }) {
     }
   }, [symbol, lastFetched])
 
-  if (error) return <p className="error" role="alert">{error}</p>
+  if (hasFailed) return <p className="note">No chart to show right now.</p>
   if (points === null) return <p className="note">Loading...</p>
   if (points.length === 0) return <p className="note">No prices saved for {symbol} yet.</p>
 
@@ -66,9 +70,10 @@ function PriceChart({ symbol, lastFetched }) {
             width={65}
           />
           <Tooltip
+            cursor={{ stroke: 'var(--muted)', strokeDasharray: '4 4' }}
             labelFormatter={formatDateTime}
             formatter={(price) => [formatMoney(price), 'Price']}
-            contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 6 }}
+            contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 9 }}
             itemStyle={{ color: 'var(--text)' }}
           />
           {/* With only one price there is no line to draw, so show a dot */}
@@ -79,7 +84,8 @@ function PriceChart({ symbol, lastFetched }) {
             strokeWidth={2}
             dot={points.length === 1 ? { r: 4, fill: 'var(--line)' } : false}
             activeDot={{ r: 5 }}
-            isAnimationActive={false}
+            isAnimationActive={!prefersReducedMotion()} // draws the line from left to right
+            animationDuration={900}
           />
         </LineChart>
       </ResponsiveContainer>

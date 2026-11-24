@@ -24,7 +24,7 @@ export async function checkAlerts(symbol, price, sendMessage = sendTelegramMessa
     try {
       await sendMessage(text);
       // Only mark it after the message was sent. If sending failed, we try again next time.
-      markAlertTriggered(alert.id);
+      markAlertTriggered(alert);
       console.log(`[alerts] Sent: ${symbol} ${alert.direction} ${alert.target_price}`);
     } catch (error) {
       console.error(`[alerts] Alert for ${symbol} failed: ${error.message}`);
