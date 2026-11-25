@@ -15,6 +15,7 @@ import {
   updateAlert,
   deleteAlert,
 } from './db.js';
+import { fetchDuePrices } from './priceJob.js';
 import { calculateHolding, calculateTotal } from './portfolio.js';
 
 const router = express.Router();
@@ -69,6 +70,9 @@ router.post('/holdings', (req, res) => {
   const { symbol, quantity, buy_price, buy_date } = req.body;
   const id = saveHolding(symbol, quantity, buy_price, buy_date);
   res.status(201).json(getHolding(id));
+
+  // Get the new share's price in the background, so the reply isn't delayed
+  fetchDuePrices();
 });
 
 // Edit a holding (send all four fields)

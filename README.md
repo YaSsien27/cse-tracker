@@ -20,8 +20,9 @@ The screenshots use sample data, not real prices.
 ## Features
 
 - **Holdings:** add, edit and delete the shares you own.
-- **Scheduled prices:** fetched every 15 minutes during market hours (9:30-14:30
-  Colombo time, Monday to Friday) and saved in a database.
+- **Automatic prices:** fetched every 5 minutes during market hours (9:30-14:30
+  Colombo time, Monday to Friday), when the server starts and when you add a share.
+  If the computer slept through a fetch, it catches up after waking.
 - **Profit and loss:** for each holding and for the whole portfolio.
 - **Price history:** a line chart for each share.
 - **Price alerts:** a Telegram message when a price reaches or passes your target.
@@ -43,7 +44,7 @@ The screenshots use sample data, not real prices.
 
 ```mermaid
 flowchart LR
-  CSE[CSE website] -->|every 15 min| Job[Price job]
+  CSE[CSE website] -->|every 5 min| Job[Price job]
   Job --> DB[(SQLite)]
   Job -->|target reached| Telegram
   DB <--> API[Express API]
@@ -78,7 +79,7 @@ npm run dev
 ```
 
 Open http://localhost:5173 and add a holding, using a symbol such as `JKH.N0000`.
-Its price appears after the next scheduled fetch, so the server must be running
+Its price appears within a few seconds. After that, it updates while the server runs
 during market hours.
 
 ## Telegram alerts (optional)
@@ -132,7 +133,7 @@ server/
   index.js        starts the server and the price job
   apiRoutes.js    the API
   db.js           database tables and functions
-  priceJob.js     the price schedule
+  priceJob.js     decides when to fetch prices
   cseApi.js       fetches a price from CSE
   portfolio.js    profit and loss maths
   alerts.js       decides when an alert fires
@@ -148,7 +149,8 @@ client/src/
 
 - It is made to run on your own computer. The API has no login, so don't put it on the
   internet as it is.
-- Prices are only fetched while the server is running.
+- Prices are only fetched while the server is running and the computer is awake.
+- Prices can be about 5 minutes old, so quick changes between fetches can be missed.
 - It doesn't know about Poya days and other market holidays.
 - Broker fees and taxes are not included in profit and loss.
 - A symbol is checked for its format, but not that it exists.
@@ -159,6 +161,6 @@ More ideas and known problems are in [NOTES.md](NOTES.md).
 
 CSE has no official public API. Prices come from unofficial endpoints used by
 [cse.lk](https://www.cse.lk), which could change at any time. Please keep the
-15-minute schedule so the site isn't overloaded.
+5-minute schedule so the site isn't overloaded.
 
 This project is not connected to the Colombo Stock Exchange and is not financial advice.

@@ -53,6 +53,12 @@ function App() {
     setChangeCount((count) => count + 1)
   }
 
+  // The server fetches a new share's price in the background, so look again shortly
+  function handleAdded() {
+    reload()
+    setTimeout(reload, 4000)
+  }
+
   const holdings = portfolio?.holdings ?? []
   // Each symbol once, even if it was bought several times
   const symbols = [...new Set(holdings.map((holding) => holding.symbol))]
@@ -111,7 +117,7 @@ function App() {
 
               <section className="card">
                 <h2>Add a holding</h2>
-                <HoldingForm onSaved={reload} />
+                <HoldingForm onSaved={handleAdded} />
               </section>
             </div>
 

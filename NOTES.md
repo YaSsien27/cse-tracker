@@ -9,8 +9,9 @@ reaches a target.
 Built with Node.js + Express (`/server`), React + Vite (`/client`), and SQLite.
 
 CSE has no official API, so prices come from the unofficial endpoints used by
-its website. The scheduled job fetches once every 15 minutes, 9:30-14:30 Colombo
-time, Monday to Friday.
+its website. The scheduled job fetches once every 5 minutes, 9:30-14:30 Colombo
+time, Monday to Friday. Prices are also fetched when the server starts, when a share
+is added, and about 15 seconds after the computer wakes if a round was missed.
 
 ## How to run it
 
@@ -87,6 +88,8 @@ If a token is ever exposed, send `/revoke` to @BotFather to replace it.
   An unknown symbol returns status 404 with an empty `{}`.
 - **Never crashing:** one failed price must not stop the other symbols or the server.
 - **Schedule:** running only in market hours, in Colombo time, whatever the computer's timezone.
+- **Sleep:** node-cron skips a round if the computer was asleep, so the job catches up
+  once after waking.
 - **Alerts firing once:** an alert is marked as triggered only after its message is sent,
   so a failed message is tried again.
 - **Missing prices:** a share without a price shows a dash and is left out of the total,
@@ -98,12 +101,16 @@ If a token is ever exposed, send `/revoke` to @BotFather to replace it.
 
 Known problems:
 
-- The full chain (scheduled fetch, then alert, then Telegram) has not been seen working
-  with a real price yet.
+- Prices and alerts stop while the computer sleeps. Prices from that time can't be recovered.
+- If Wi-Fi takes over 15 seconds to return after sleep, the catch-up fetch fails, and the
+  next round may be skipped too.
+- Quick price spikes between two fetches are missed.
+- A share edited to a new symbol, or an alert for a share I don't own, waits for the next
+  scheduled fetch.
 - Wrong symbols are accepted if they look right. They show as an error in the server log.
 - The job doesn't know about Poya days and other holidays, so it may save old prices.
-- Restarting the server can't cause extra fetches, but running `fetchPrice.js` by hand
-  isn't limited to every 15 minutes.
+- Restarting the server doesn't fetch saved prices again within 5 minutes, but a symbol
+  that failed is tried again. Running `fetchPrice.js` by hand isn't limited at all.
 - If Telegram gets a message but its reply is lost, the alert may be sent twice.
 - The API has no login, so other devices on the network may be able to reach it.
 - Broker fees and taxes are not included in profit/loss.
